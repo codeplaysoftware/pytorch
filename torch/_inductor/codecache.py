@@ -3084,7 +3084,6 @@ class DLLWrapper:
 
     def _dlclose(self) -> None:
         f_dlclose = None
-
         if is_linux():
             syms = CDLL(None)
             if not hasattr(syms, "dlclose"):
@@ -3321,6 +3320,173 @@ class ROCmCodeCache:
             source_code, dst_file_ext
         )
         return (DLLWrapper(dst_file_path), hash_key, source_code_path)
+
+
+def _sycl_compiler() -> Optional[str]:
+    # TODO: Add detection of `icpx` as release compiler and add option to use
+    # environment variable to specify specific compiler.
+    return "clang++"
+
+
+def _sycl_lib_options() -> list[str]:
+    _set_gpu_runtime_env()  # cpp_extension consults the env
+    from torch.utils import cpp_extension
+
+    lpaths = cpp_extension.library_paths(device_type="xpu")
+    extra_ldflags: list[str] = []
+    if is_linux():
+        for path in lpaths:
+            # -rpath ensures the DLL can find its dependencies when loaded, even
+            # if the library path is non-standard.
+            extra_ldflags.extend([f"-L{path}", "-Xlinker", f"-rpath={path}"])
+    else:
+        raise NotImplementedError(
+            "Unsupported env, failed to find cuda libs! Currently only Linux is supported."
+        )
+    return extra_ldflags
+
+
+def _dpcpp_compiler_options() -> list[str]:
+    # TODO Select device target architecture based on environment.
+    options = [
+        "-fsycl",
+        "-std=c++17",
+        "-fPIC",
+        "-Xspirv-translator", "-spirv-ext=+SPV_INTEL_split_barrier",
+        "-fsycl-range-rounding=disable",
+        # TODO: Replace this with device-specific architecture.
+        "-fsycl-targets=spir64",
+        "-DCUTLASS_ENABLE_SYCL",
+        "-DSYCL_INTEL_TARGET",
+        # TODO: Add optimization level.
+    ]
+    # TODO: Add special case for FB?
+    # TODO: Add debug info handling.
+    # TODO: Add fast-math handling.
+
+    return options
+
+
+def sycl_compile_command(
+    src_files: list[str],
+    dst_file: str,
+    dst_file_ext: str,
+    extra_args: Optional[list[str]] = None,
+) -> str:
+    if extra_args is None:
+        extra_args = []
+    include_paths = _cutlass_include_paths()
+    sycl_lib_options = _sycl_lib_options()
+    dpcpp_compiler_options = _dpcpp_compiler_options()
+    options = (
+        dpcpp_compiler_options
+        + extra_args
+        + ["-I" + path for path in include_paths]
+        + sycl_lib_options
+    )
+    src_file = " ".join(src_files)
+    res = ""
+    if dst_file_ext == "o":
+        res = f"{_sycl_compiler()} {' '.join(options)} -c -o {dst_file} {src_file}"
+    elif dst_file_ext == "so":
+        options.append("-shared")
+        res = f"{_sycl_compiler()} {' '.join(options)} -o {dst_file} {src_file}"
+    elif dst_file_ext == "exe":
+        res = f"{_sycl_compiler()} {' '.join(options)} -o {dst_file} {src_file}"
+    else:
+        raise NotImplementedError(f"Unsupported output file suffix {dst_file_ext}!")
+    log.debug("SYCL command: %s", res)
+    return res
+
+
+
+@clear_on_fresh_inductor_cache
+class SYCLCodeCache:
+    @dataclasses.dataclass
+    class CacheEntry:
+        input_path: str
+        output_path: str
+
+    cache: dict[str, CacheEntry] = {}
+    cache_clear = staticmethod(cache.clear)
+    _SOURCE_CODE_SUFFIX = "cpp"
+
+    @classmethod
+    def write(cls, source_code: str, dst_file_ext: str) -> tuple[str, str]:
+        """
+        Writes source code into a file with dst_file_ext as the file extension.
+        Returns the hash key of source code, and the path to the file.
+        """
+
+        sycl_command = repr(
+            sycl_compile_command(["dummy_input"], "dummy_output", dst_file_ext)
+        )
+        key, input_path = write(
+            source_code, cls._SOURCE_CODE_SUFFIX, extra=sycl_command
+        )
+        return key, input_path
+
+    @classmethod
+    def compile(
+        cls, source_code: str, dst_file_ext: str, extra_args: Optional[list[str]] = None
+    ) -> tuple[str, str, str]:
+        """
+        Compiles SYCL source_code into a file with dst_file_ext extension.
+        Returns a tuple of dst_file_path, hash_key, source_code_path
+        """
+        key, input_path = cls.write(source_code, dst_file_ext)
+        if key not in cls.cache:
+            from torch.utils._filelock import FileLock
+
+            lock_dir = get_lock_dir()
+            lock = FileLock(os.path.join(lock_dir, key + ".lock"), timeout=LOCK_TIMEOUT)
+            with lock:
+                output_path = input_path[: -len(cls._SOURCE_CODE_SUFFIX)] + dst_file_ext
+                if not os.path.exists(output_path):
+                    cmd = sycl_compile_command(
+                        [input_path], output_path, dst_file_ext, extra_args
+                    )
+                    with open(input_path, "a") as f:
+                        f.write("\n")
+                        f.write(f"// SYCL Compile cmd\n// {cmd}\n")
+                    start_time = time()
+                    log.debug("SYCL Compilation: %s", cmd)
+                    cmd_parts = cmd.split(" ")
+                    try:
+                        subprocess.check_output(
+                            cmd_parts, stderr=subprocess.STDOUT, env=os.environ
+                        )
+                    except subprocess.CalledProcessError as error:
+                        raise exc.CUDACompileError(cmd_parts, error.output) from error
+                    end_time = time()
+                    log_duration_msg = f"SYCL Compilation took {end_time - start_time} seconds. Compile command: {cmd}"
+                    log.info(log_duration_msg)
+                else:
+                    log.debug(
+                        "SYCL Compilation skipped: %s since output already exists",
+                        input_path,
+                    )
+                cls.cache[key] = SYCLCodeCache.CacheEntry(input_path, output_path)
+
+        return (cls.cache[key].output_path, key, input_path)
+
+    @classmethod
+    def load(cls, source_code: str, dst_file_ext: str) -> tuple[DLLWrapper, str, str]:
+        """
+        Compiles source code and loads the generated .so file.
+        Returns a tuple of DLLWrapper, hash_key, source_code_path
+        """
+
+        if dst_file_ext != "so":
+            raise RuntimeError(
+                f"Only support loading a .so file for now. "
+                f"Requested file extension: {dst_file_ext}. Source code: {source_code}"
+            )
+        dst_file_path, hash_key, source_code_path = cls.compile(
+            source_code, dst_file_ext
+        )
+        return (DLLWrapper(dst_file_path), hash_key, source_code_path)
+
 
 
 class CodeCacheFuture:
