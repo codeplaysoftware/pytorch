@@ -871,6 +871,16 @@ enable_linear_binary_folding = (
 # Adds NVTX annotations aroung training phases
 annotate_training: bool = os.environ.get("TORCHINDUCTOR_ANNOTATE_TRAINING", "0") == "1"
 
+# Path to the CUTLASS repo root directory.
+# The default path only works under PyTorch local development environment.
+cutlass_dir = os.environ.get(
+    "TORCHINDUCTOR_CUTLASS_DIR",
+    os.path.abspath(
+        os.path.join(os.path.dirname(torch.__file__), "../third_party/cutlass/")
+    ),
+)
+
+
 
 # config specific to codegen/cpp.py
 class cpp:
@@ -1280,15 +1290,6 @@ class cuda:
     # Whether to use fast math.
     use_fast_math = False
 
-    # Path to the CUTLASS repo root directory.
-    # The default path only works under PyTorch local development environment.
-    cutlass_dir = os.environ.get(
-        "TORCHINDUCTOR_CUTLASS_DIR",
-        os.path.abspath(
-            os.path.join(os.path.dirname(torch.__file__), "../third_party/cutlass/")
-        ),
-    )
-
     # Configures the maximum number of CUTLASS configs to profile in max_autotune.
     # By default it's None, so that all CUTLASS configs are tuned.
     # This is mainly used to reduce test time in CI.
@@ -1534,7 +1535,7 @@ _cache_config_ignore_prefix: list[str] = [
     # trace functions are not relevant to config caching
     "trace",
     # uses absolute path
-    "cuda.cutlass_dir",
+    "cutlass_dir",
     # not relevant
     "worker_start_method",
     "compile_threads",
