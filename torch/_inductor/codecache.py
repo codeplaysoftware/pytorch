@@ -3347,22 +3347,29 @@ def _sycl_lib_options() -> list[str]:
 
 
 def _dpcpp_compiler_options() -> list[str]:
-    # TODO Select device target architecture based on environment.
+    # TODO: Automatically detect device architecture.
+    arch = f"intel_gpu_{config.sycl.arch}" if config.sycl.arch is not None else "spir64"
     options = [
         "-fsycl",
         "-std=c++17",
         "-fPIC",
         "-Xspirv-translator", "-spirv-ext=+SPV_INTEL_split_barrier",
         "-fsycl-range-rounding=disable",
-        # TODO: Replace this with device-specific architecture.
-        "-fsycl-targets=spir64",
+        f"-fsycl-targets={arch}",
+        config.sycl.compile_opt_level,
         "-DCUTLASS_ENABLE_SYCL",
         "-DSYCL_INTEL_TARGET",
-        # TODO: Add optimization level.
     ]
     # TODO: Add special case for FB?
-    # TODO: Add debug info handling.
-    # TODO: Add fast-math handling.
+    if config.sycl.enable_debug_info:
+        options.extend(["-g", "-DCUTLASS_DEBUG_TRACE_LEVEL=1"])
+    if config.sycl.use_fast_math:
+        options.extend(
+            [
+                "-ffast-math",
+                "-DCUTLASS_USE_TANH_FOR_SIGMOID=1",
+            ]
+        )
 
     return options
 

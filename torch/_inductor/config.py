@@ -1402,6 +1402,22 @@ class rocm:
     split_k_threshold: int = 16
 
 
+class sycl:
+    # Intel GPU arch to use for SYCL template kernel compilation.
+    # e.g. "pvc", "bmg", etc.
+    # When arch is None, generates SPIR-V that is finalized at runtime.
+    arch: Optional[str] = None
+
+    # Optimization level for the host compiler.
+    compile_opt_level: Literal["-O0", "-O1", "-O2", "-O3", "-OS"] = "-O1"
+
+    # Whether to enable debug info, e.g. line number, cutlass debug info.
+    enable_debug_info = False
+
+    # Whether to use fast math.
+    use_fast_math = False
+
+
 # Backend to use for CPU codegen either "cpp" or "triton" (experimental) or "halide" (experimental)
 cpu_backend: Literal["cpp", "triton", "halide"] = "cpp"
 
