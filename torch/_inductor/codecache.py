@@ -3464,7 +3464,7 @@ class SYCLCodeCache:
                             cmd_parts, stderr=subprocess.STDOUT, env=os.environ
                         )
                     except subprocess.CalledProcessError as error:
-                        raise exc.CUDACompileError(cmd_parts, error.output) from error
+                        raise exc.SYCLCompileError(cmd_parts, error.output) from error
                     end_time = time()
                     log_duration_msg = f"SYCL Compilation took {end_time - start_time} seconds. Compile command: {cmd}"
                     log.info(log_duration_msg)
