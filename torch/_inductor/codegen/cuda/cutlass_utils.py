@@ -56,13 +56,13 @@ def try_import_cutlass() -> bool:
             log.warning("CUTLASS version < 3.7 is not recommended.")
 
         log.debug(
-            "Found cutlass_library in python search path, overriding config.cuda.cutlass_dir"
+            "Found cutlass_library in python search path, overriding config.cutlass_dir"
         )
         cutlass_library_dir = os.path.dirname(cutlass_library.__file__)
         assert os.path.isdir(cutlass_library_dir), (
             f"{cutlass_library_dir} is not a directory"
         )
-        config.cuda.cutlass_dir = os.path.abspath(
+        config.cutlass_dir = os.path.abspath(
             os.path.join(
                 cutlass_library_dir,
                 "source",
@@ -71,7 +71,7 @@ def try_import_cutlass() -> bool:
         return True
     except ModuleNotFoundError:
         log.debug(
-            "cutlass_library not found in sys.path, trying to import from config.cuda.cutlass_dir"
+            "cutlass_library not found in sys.path, trying to import from config.cutlass_dir"
         )
 
     # Copy CUTLASS python scripts to a temp dir and add the temp dir to Python search path.
@@ -85,7 +85,7 @@ def try_import_cutlass() -> bool:
 
     # contains both cutlass and cutlass_library
     # we need cutlass for eVT
-    cutlass_python_path = path_join(config.cuda.cutlass_dir, "python")
+    cutlass_python_path = path_join(config.cutlass_dir, "python")
     torch_root = os.path.abspath(os.path.dirname(torch.__file__))
     mock_src_path = os.path.join(
         torch_root,

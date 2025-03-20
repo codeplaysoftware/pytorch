@@ -1515,7 +1515,7 @@ def use_cutlass_template(layout: Layout, m: int, n: int, k: int) -> bool:
         if not try_import_cutlass():
             log.warning(
                 "Failed to import CUTLASS lib. Please check whether "
-                "_inductor.config.cuda.cutlass_dir is set correctly. "
+                "_inductor.config.cutlass_dir is set correctly. "
                 "Skipping CUTLASS backend for now."
             )
             return False

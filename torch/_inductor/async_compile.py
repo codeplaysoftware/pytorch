@@ -33,6 +33,7 @@ from torch._inductor.codecache import (
     LambdaFuture,
     ROCmCodeCache,
     StaticAutotunerFuture,
+    SYCLCodeCache,
     torch_key,
 )
 from torch._inductor.compile_worker.subproc_pool import AnyPool, SubprocPool
@@ -424,6 +425,18 @@ class AsyncCompile:
             return ROCmCodeCache.load(source_code, dst_file_ext)[0]
 
         return self.submit(task)
+
+    def sycl(self, source_code, dst_file_ext, aot_compile=False):
+        kernel_code_log.info("SYCL Kernel:\n%s", source_code)
+
+        def task():
+            if aot_compile:
+                # TODO: Suppot AoT compilation.
+                raise RuntimeError("AoT compilation not yet supported for SYCL")
+            return SYCLCodeCache.load(source_code, dst_file_ext)[0]
+
+        return self.submit(task)
+
 
     def halide(self, meta: HalideMeta, source_code: str):
         kernel_code_log.info("Halide Kernel:\n%r\n%s", meta, source_code)

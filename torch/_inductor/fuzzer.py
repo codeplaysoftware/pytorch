@@ -470,7 +470,7 @@ MODULE_DEFAULTS: dict[str, ConfigType] = {
         "aot_inductor.presets": DEFAULT,  # Typing
         "cuda.arch": DEFAULT,  # Out of Scope
         "cuda.version": DEFAULT,  # Out of Scope
-        "cuda.cutlass_dir": DEFAULT,  # Out of Scope
+        "cutlass_dir": DEFAULT,  # Out of Scope
         "cuda.cuda_cxx": DEFAULT,  # Out of Scope
         "rocm.arch": DEFAULT,  # Out of Scope
         "rocm.ck_supported_arch": DEFAULT,  # Out of Scope
