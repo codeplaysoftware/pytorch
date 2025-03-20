@@ -871,6 +871,16 @@ enable_linear_binary_folding = (
 # Adds NVTX annotations aroung training phases
 annotate_training: bool = os.environ.get("TORCHINDUCTOR_ANNOTATE_TRAINING", "0") == "1"
 
+# Path to the CUTLASS repo root directory.
+# The default path only works under PyTorch local development environment.
+cutlass_dir = os.environ.get(
+    "TORCHINDUCTOR_CUTLASS_DIR",
+    os.path.abspath(
+        os.path.join(os.path.dirname(torch.__file__), "../third_party/cutlass/")
+    ),
+)
+
+
 
 # config specific to codegen/cpp.py
 class cpp:
@@ -1280,15 +1290,6 @@ class cuda:
     # Whether to use fast math.
     use_fast_math = False
 
-    # Path to the CUTLASS repo root directory.
-    # The default path only works under PyTorch local development environment.
-    cutlass_dir = os.environ.get(
-        "TORCHINDUCTOR_CUTLASS_DIR",
-        os.path.abspath(
-            os.path.join(os.path.dirname(torch.__file__), "../third_party/cutlass/")
-        ),
-    )
-
     # Configures the maximum number of CUTLASS configs to profile in max_autotune.
     # By default it's None, so that all CUTLASS configs are tuned.
     # This is mainly used to reduce test time in CI.
@@ -1400,6 +1401,22 @@ class rocm:
 
     # The threshold at which we trigger a splitK config - K // max(M,N) has to be greater than this
     split_k_threshold: int = 16
+
+
+class sycl:
+    # Intel GPU arch to use for SYCL template kernel compilation.
+    # e.g. "pvc", "bmg", etc.
+    # When arch is None, generates SPIR-V that is finalized at runtime.
+    arch: Optional[str] = None
+
+    # Optimization level for the host compiler.
+    compile_opt_level: Literal["-O0", "-O1", "-O2", "-O3", "-OS"] = "-O1"
+
+    # Whether to enable debug info, e.g. line number, cutlass debug info.
+    enable_debug_info = False
+
+    # Whether to use fast math.
+    use_fast_math = False
 
 
 # Backend to use for CPU codegen either "cpp" or "triton" (experimental) or "halide" (experimental)
@@ -1518,7 +1535,7 @@ _cache_config_ignore_prefix: list[str] = [
     # trace functions are not relevant to config caching
     "trace",
     # uses absolute path
-    "cuda.cutlass_dir",
+    "cutlass_dir",
     # not relevant
     "worker_start_method",
     "compile_threads",
