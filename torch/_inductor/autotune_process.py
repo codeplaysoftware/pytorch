@@ -24,6 +24,7 @@ from torch._inductor import ir
 from torch._inductor.codecache import (
     CppCodeCache,
     CUDACodeCache,
+    SYCLCodeCache,
     DLLWrapper,
     get_hash,
     PyCodeCache,
@@ -934,6 +935,94 @@ class CppBenchmarkRequest(CPUDeviceBenchmarkMixin, BenchmarkRequest):
     def __str__(self) -> str:
         return f"{self.kernel_name=}"
 
+class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
+    # Important: Instances of this class have to be serializable
+    # across process boundaries. Do not put Tensors in here!
+    # TODO (SYCL) : Complete the bmrq class to enable full autotuning
+    def __init__(
+        self,
+        kernel_name: str,
+        input_tensor_meta: Union[TensorMeta, list[TensorMeta]],
+        output_tensor_meta: Union[TensorMeta, list[TensorMeta]],
+        extra_args: Iterable[Any],
+        source_code: str,
+    ) -> None:
+        super().__init__(kernel_name, input_tensor_meta, output_tensor_meta, extra_args)
+        self.source_code = source_code
+        self.workspace_size: int = 0
+        self.workspace: Optional[torch.Tensor] = None
+        self.DLL: Optional[DLLWrapper] = None
+        self._workspace_size_updated = False
+        self.hash_key: str = ""
+        self.source_file: str = ""
+        self.hash_key, self.source_file = SYCLCodeCache.write(self.source_code, "so")
+        
+    def precompile(self):
+        # Prepopulate SYCLCodeCache
+        autotuning_log.debug("Precompiling %s", self)
+        SYCLCodeCache.compile(self.source_code, "so")
+        autotuning_log.debug("Done precompiling %s", self)
+        
+    def make_run_fn(
+        self, *input_tensors: torch.Tensor, output_tensor: torch.Tensor
+    ) -> Callable[[], None]:
+        self.ensure_dll_loaded()
+        self.update_workspace_size()
+        args = [
+            c_void_p(tensor.data_ptr())
+            for tensor in list(input_tensors) + [output_tensor]
+        ]
+        autotuning_log.debug(
+            "make_run_fn: self.kernel_name=%s, self.source_file=%s, self.hash_key=%s, self.DLL=%s, args=%s, self.extra_args=%s",
+            self.kernel_name,
+            self.source_file,
+            self.hash_key,
+            self.DLL,
+            args,
+            self.extra_args,
+        )
+        queue_ptr = c_void_p(torch.xpu.current_stream().sycl_queue)
+        run_method = getattr(self.DLL, self.kernel_name)
+        workspace_ptr = c_void_p(0)
+        if self.workspace_size > 0:
+            self.workspace = torch.zeros(
+                (self.workspace_size + 7) // 8,
+                dtype=torch.float64,
+                device=output_tensor.device,
+            )
+            workspace_ptr = c_void_p(self.workspace.data_ptr())
+
+        # Generate partial function.
+        return functools.partial(
+            run_method,
+            *args,
+            *self.extra_args,
+            None,  # null workspace size ptr
+            workspace_ptr,  # set workspace ptr,
+            queue_ptr,
+        )
+
+    def update_workspace_size(self) -> None:
+        if self._workspace_size_updated:
+            return
+        # Harcoded temporarily for testing with known kernels
+        self.workspace_size = 4096  # Fixed size for PoC
+        self._workspace_size_updated = True
+        # TODO (SYCL) : Implement comprehensive workspace updating mechanism
+
+    def ensure_dll_loaded(self):
+        if self.DLL is None:
+            self.DLL, self.hash_key, self.source_file = SYCLCodeCache.load(
+                self.source_code, "so"
+            )
+
+    def cleanup_run_fn(self) -> None:
+        if self.DLL is not None:
+            self.DLL.close()
+        self.workspace = None
+
+    def __str__(self) -> str:
+        return f"{self.kernel_name=}, {self.source_file=}, {self.hash_key=}"
 
 def benchmark_in_sub_process(
     choices: list[TritonTemplateCaller],

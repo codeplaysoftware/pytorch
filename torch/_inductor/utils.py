@@ -1411,6 +1411,30 @@ def use_cutlass_template(layout: Layout, m: int, n: int, k: int) -> bool:
             return False
     return res
 
+def use_cutlass_sycl_template(layout: Layout, m: int, n: int, k: int) -> bool:
+    from .virtualized import V
+
+    gemm_size = V.graph.sizevars.size_hint(m * n * k, fallback=-1)
+    if gemm_size <= 0 or gemm_size < config.sycl.cutlass_backend_min_gemm_size:
+        return False
+    from .codegen.xpu.cutlass_utils import try_import_cutlass
+
+    layout_dtypes = [torch.bfloat16] # TODO (SYCL) : Extend to the rest of dtypes
+    res = (
+        _use_template_for_gpu(layout, layout_dtypes)
+        and use_max_autotune()
+        and _use_autotune_backend("CUTLASS")
+    )
+
+    if res:
+        if not try_import_cutlass():
+            log.warning(
+                "Failed to import CUTLASS lib. Please check whether "
+                "_inductor.config.cutlass_dir is set correctly. "
+                "Skipping CUTLASS backend for now."
+            )
+            return False
+    return res
 
 @functools.lru_cache(None)
 def _rocm_native_device_arch_name(device: str) -> str:
