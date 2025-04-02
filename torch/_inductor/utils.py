@@ -1269,6 +1269,14 @@ def is_big_gpu(index_or_device: Union[int, torch.device] = 0) -> bool:
         return False
     return True
 
+@functools.lru_cache(None)
+def _is_xpu(index_or_device: Union[int, torch.device] = 0) -> bool:
+    if isinstance(index_or_device, torch.device):
+        device = index_or_device
+    else:
+        device = torch.device(get_gpu_type(), index_or_device)
+
+    return device.type == "xpu"
 
 @functools.lru_cache
 def get_max_num_sms() -> int:
@@ -1390,8 +1398,8 @@ def use_cutlass_template(layout: Layout, m: int, n: int, k: int) -> bool:
         return False
     from .codegen.cuda.cutlass_utils import try_import_cutlass
 
-    # Do not use cutlass template on ROCm
-    if torch.version.hip:
+    # Do not use CUDA cutlass template on ROCm or SYCL
+    if torch.version.hip or _is_xpu(layout):
         return False
 
     layout_dtypes = [torch.float16, torch.bfloat16, torch.float32, torch.int32]
@@ -1418,6 +1426,9 @@ def use_cutlass_sycl_template(layout: Layout, m: int, n: int, k: int) -> bool:
     if gemm_size <= 0 or gemm_size < config.sycl.cutlass_backend_min_gemm_size:
         return False
     from .codegen.xpu.cutlass_utils import try_import_cutlass
+
+    if not _is_xpu(layout):
+        return False
 
     layout_dtypes = [torch.bfloat16] # TODO (SYCL) : Extend to the rest of dtypes
     res = (

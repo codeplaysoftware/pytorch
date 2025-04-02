@@ -39,7 +39,7 @@ PT_EXPORT {{kernel_call_signature}} {
   using ElementComputeEpilogue = {{instance_type}}::ElementAccumulator;
   using coord_t = cutlass::gemm::GemmCoord::Index;
   static cutlass::KernelHardwareInfo hw_info;
-  
+
   const int device_id = 0;
 
   if (hw_info.sm_count == 0) {
@@ -563,7 +563,7 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
 
         assert cutlass_utils.try_import_cutlass()
         import cutlass_library.gemm_operation as cutlass_gemm_op
-        import cutlass_library.library as cutlass_lib
+        import cutlass_library.library as cutlass_lib  # noqa: F401
 
         assert isinstance(
             op, cutlass_gemm_op.GemmOperation
@@ -663,7 +663,7 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
         )
 
     @staticmethod
-    def _get_supported_ops() -> "list[cutlass_library.gemm_operation.GemmOperation]":
+    def _get_supported_ops() -> "list[cutlass_library.gemm_operation.GemmOperation]":  # type: ignore[name-defined]  # noqa: F821
         import cutlass_library.library as cutlass_lib
 
         return [cutlass_lib.GemmKind.Universal3x]
@@ -673,7 +673,7 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
 
     def _get_template_args(
         self,
-        op: "cutlass_library.gemm_op.GemmOperation",
+        op: "cutlass_library.gemm_op.GemmOperation",  # type: ignore[name-defined]  # noqa: F821
     ) -> tuple[str, Optional[str]]:
         return (GEMM_ARGS_CUTLASS_3X, GEMM_ARGS_CUTLASS_3X_EPILOGUE)
 
