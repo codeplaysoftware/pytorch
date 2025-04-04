@@ -390,6 +390,7 @@ def init_backend_registration() -> None:
     from .cpp_wrapper_cpu_array_ref import CppWrapperCpuArrayRef
     from .cpp_wrapper_gpu import CppWrapperGpu
     from .cuda_combined_scheduling import CUDACombinedScheduling
+    from .xpu_combined_scheduling import SYCLCombinedScheduling
     from .halide import HalideScheduling
     from .mps import MetalScheduling
     from .triton import TritonScheduling
@@ -424,9 +425,10 @@ def init_backend_registration() -> None:
         )
 
     if get_scheduling_for_device("xpu") is None:
+        # SYCLCombinedScheduling combines Triton and SYCL C++ scheduling for XPU devices via delegation
         register_backend_for_device(
             "xpu",
-            TritonScheduling,
+            SYCLCombinedScheduling,
             PythonWrapperCodegen,
             CppWrapperGpu,
         )

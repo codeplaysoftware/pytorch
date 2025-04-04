@@ -101,11 +101,14 @@ if TYPE_CHECKING:
     from torch.fx.node import Node
 
     from .codegen.cuda.cuda_template import CUDATemplate
+    from .codegen.xpu.sycl_template import SYCLTemplate
+    
     from .graph import GraphLowering
     from .utils import IndentedBuffer
 
 else:
     CUDATemplate: TypeAlias = object
+    SYCLTemplate: TypeAlias = object
 
 
 try:
@@ -4535,7 +4538,7 @@ class ChoiceCaller:
     During autotuning, self.benchmark() is first called to get benchmark result,
     and if this choice is selected, self.output_node() is called to get the output_node.
 
-    Children classes: TritonTemplateCaller, CUDATemplateCaller.
+    Children classes: TritonTemplateCaller, CUDATemplateCaller, SYCLTemplateCaller.
     """
 
     def __init__(
@@ -4670,6 +4673,22 @@ class CUDATemplateBuffer(TemplateBuffer):
     def get_workspace_size(self):  # type: ignore[no-untyped-def]
         return self.workspace_size if self.workspace_size is not None else 0
 
+class SYCLTemplateBuffer(TemplateBuffer):
+    def __init__(  # type: ignore[no-untyped-def]
+        self,
+        layout,
+        inputs,
+        make_kernel_render,
+        workspace_size: int,
+        template: SYCLTemplate,
+    ) -> None:
+        super().__init__(layout, inputs, make_kernel_render)
+        # Global memory (in bytes) needed for this template.
+        self.workspace_size = workspace_size
+        self.template = template
+
+    def get_workspace_size(self):  # type: ignore[no-untyped-def]
+        return self.workspace_size if self.workspace_size is not None else 0
 
 class CppTemplateBuffer(TemplateBuffer):
     def __init__(self, layout, inputs, make_kernel_render, template, choice) -> None:  # type: ignore[no-untyped-def]
