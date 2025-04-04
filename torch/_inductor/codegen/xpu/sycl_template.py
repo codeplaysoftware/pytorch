@@ -214,6 +214,7 @@ class CUTLASSTemplate(SYCLTemplate):
         res.splice(
             """
                 using namespace cute;
+                using bfloat16 = cutlass::bfloat16_t; // TODO (SYCL) Workaround the cpp bfloat16 not mapping to bfloat16_t
                 #define CUTLASS_CHECK(status)                                                      \\
                 {                                                                                  \\
                   cutlass::Status error = status;                                                  \\

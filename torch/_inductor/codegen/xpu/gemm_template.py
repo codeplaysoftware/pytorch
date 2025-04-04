@@ -21,7 +21,7 @@ from ..common import IndentedBuffer
 from . import cutlass_utils
 from .sycl_kernel import SYCLTemplateKernel
 from .sycl_template import CUTLASSTemplate
-
+import torch
 
 log = logging.getLogger(__name__)
 
@@ -277,8 +277,6 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
                 self.maybe_append_choice(
                     choices, description=description, op=op, swizzle=swizzle
                 )
-                break  # TODO (SYCL) : Currently limited to one config
-            break  # TODO (SYCL) : Currently limited to one config
 
         if len(ops) == 0:
             input_layouts = [node.get_layout() for node in input_nodes]
@@ -403,6 +401,8 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
         if not (
             cutlass_utils.dtype_match(X.get_dtype(), op.A.element)
             and cutlass_utils.dtype_match(W.get_dtype(), op.B.element)
+            # TODO (SYCL) : Careful with this dtypes check of the output, as it would
+            # return false without the workaround in CUTLASS3xGemmTemplate.__init__()
             and cutlass_utils.dtype_match(
                 self.output_node.get_layout().dtype, op.D.element
             )
@@ -643,7 +643,11 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
         beta: float,
         input_reorder: Optional[list[int]] = None,
     ):
-        super().__init__(input_nodes, layout, alpha, beta, input_reorder)
+        # TODO (SYCL) : This is a workaround hardcoding output type (layout) to float32 
+        # Should be removed once not limited to the bfloat input->float32 accum cutlass configurations
+        float_layout = copy.deepcopy(layout)
+        float_layout.dtype = torch.float32
+        super().__init__(input_nodes, float_layout, alpha, beta, input_reorder)
 
     @staticmethod
     def add_cutlass_gemm_choices(
@@ -793,19 +797,22 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
 
         has_bias = len(self.input_nodes) >= 3 and self.input_nodes[2] is not None
 
-        if op.C.element == DataType.void:
-            if has_bias:
-                # op expects no bias, but bias exists
-                return False
-        else:
-            # op expects bias. Needs to check if bias exists and is of the right dtype
-            if not (
-                has_bias
-                and cutlass_utils.dtype_match(
-                    self.input_nodes[2].get_dtype(), op.C.element
-                )
-            ):
-                return False
+        # TODO (SYCL) : Extend this once more output dtypes are supported, 
+        # AND No source (C) is supported
+
+        # if op.C.element == DataType.void:
+        #     if has_bias:
+        #         # op expects no bias, but bias exists
+        #         return False
+        # else:
+        #     # op expects bias. Needs to check if bias exists and is of the right dtype
+        #     if not (
+        #         has_bias
+        #         and cutlass_utils.dtype_match(
+        #             self.input_nodes[2].get_dtype(), op.C.element
+        #         )
+        #     ):
+        #         return False
 
         return True
 
