@@ -29,7 +29,7 @@ def try_import_cutlass() -> bool:
     # Copy CUTLASS python scripts to a temp dir and add the temp dir to Python search path.
 
     cutlass_py_full_path = os.path.abspath(
-        os.path.join(config.sycl.cutlass_dir, "python/cutlass_library")
+        os.path.join(config.cutlass_dir, "python/cutlass_library")
     )
     tmp_cutlass_py_full_path = os.path.abspath(
         os.path.join(cache_dir(), "torch_cutlass_library")
@@ -82,8 +82,9 @@ class CUTLASSArgs:
     CUTLASS args used to initialize a CUTLASS Manifest.
     """
 
-    architectures = "11"
-    # instantiation_level: Optional[str] = None
+    architectures: Optional[str] = None
+    cuda_version: Optional[str] = None          # Unused in generator.py for PVC
+    instantiation_level: Optional[str] = None   # Unused YET in generator.py for PVC
 
     operations = "all"
     build_dir = ""
@@ -123,12 +124,15 @@ def _gen_ops_cached(arch) -> list[Any]:
         return []
     arch = _normalize_sycl_arch(arch)
 
+    sycl_version = "2025.0.1"           # Placeholder, Unused in GeneratePVC
+
     args = CUTLASSArgs(
         architectures=arch,
+        instantiation_level = "0",      # TODO (SYCL) : Make it config param once enabled in cutlass_library/generator.py
+        cuda_version = sycl_version,
     )
     manifest = cutlass_manifest.Manifest(args)
 
-    sycl_version = "2025.0.1"  # Placeholder, Unused in GeneratePVC
 
     if arch == "11":
         cutlass_generator.GeneratePVC(manifest, sycl_version)

@@ -1399,7 +1399,7 @@ def use_cutlass_template(layout: Layout, m: int, n: int, k: int) -> bool:
     from .codegen.cuda.cutlass_utils import try_import_cutlass
 
     # Do not use CUDA cutlass template on ROCm or SYCL
-    if torch.version.hip or _is_xpu(layout):
+    if torch.version.hip or _is_xpu(layout.device):
         return False
 
     layout_dtypes = [torch.float16, torch.bfloat16, torch.float32, torch.int32]
@@ -1427,7 +1427,7 @@ def use_cutlass_sycl_template(layout: Layout, m: int, n: int, k: int) -> bool:
         return False
     from .codegen.xpu.cutlass_utils import try_import_cutlass
 
-    if not _is_xpu(layout):
+    if not _is_xpu(layout.device):
         return False
 
     layout_dtypes = [torch.bfloat16] # TODO (SYCL) : Extend to the rest of dtypes
