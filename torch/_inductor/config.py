@@ -1426,7 +1426,7 @@ class sycl:
     cutlass_max_profiling_configs: Optional[int] = None
 
     # The L2 swizzle values to consider when profiling CUTLASS configs in max_autotune.
-    cutlass_max_profiling_swizzle_options: list[int] = [1] # Currently set to 1 value until benchmarking is supported
+    cutlass_max_profiling_swizzle_options: list[int] = [1] # TODO(SYCL): Currently set to 1 value until benchmarking is supported
     
     # TODO (SYCL) : Enable the standalone GEMM runner for testing later
     generate_test_runner: bool = False

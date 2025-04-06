@@ -452,10 +452,10 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
         ):
             return None
 
-        # Update Op
+        # Update op
         op = copy.deepcopy(op)
 
-        # Set output layout
+        # Set output layout.
         op.D.layout = CUTLASSGemmTemplate.cutlass_layout(self.output_node.get_layout())
 
         # Set alignments - crucial for performance and correctness
@@ -643,7 +643,7 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
         beta: float,
         input_reorder: Optional[list[int]] = None,
     ):
-        # TODO (SYCL) : This is a workaround hardcoding output type (layout) to float32 
+        # TODO (SYCL) : This is a workaround hardcoding output type (layout) to float32
         # Should be removed once not limited to the bfloat input->float32 accum cutlass configurations
         float_layout = copy.deepcopy(layout)
         float_layout.dtype = torch.float32
@@ -797,7 +797,7 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
 
         has_bias = len(self.input_nodes) >= 3 and self.input_nodes[2] is not None
 
-        # TODO (SYCL) : Extend this once more output dtypes are supported, 
+        # TODO (SYCL) : Extend this once more output dtypes are supported,
         # AND No source (C) is supported
 
         # if op.C.element == DataType.void:
