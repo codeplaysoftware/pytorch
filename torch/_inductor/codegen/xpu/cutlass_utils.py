@@ -158,12 +158,14 @@ def torch_dtype_to_cutlass_type(
     assert try_import_cutlass()
     import cutlass_library  # type: ignore[import]
 
-    if torch_dtype == torch.bfloat16:
-        return cutlass_library.library.DataType.bf16
-    elif torch_dtype == torch.float:
+    if torch_dtype == torch.float:
         return cutlass_library.library.DataType.f32
+    elif torch_dtype == torch.half:
+        return cutlass_library.library.DataType.f16
+    elif torch_dtype == torch.bfloat16:
+        return cutlass_library.library.DataType.bf16
     else:
-        raise NotImplementedError(f"Unsupported data type: {torch_dtype}")
+        raise NotImplementedError(f"Unsupported data type: {torch_dtype=}")
 
 
 def dtype_match(
@@ -174,10 +176,18 @@ def dtype_match(
     assert try_import_cutlass()
     import cutlass_library
 
-    if torch_dtype == torch.bfloat16:
-        return cutlass_dtype == cutlass_library.library.DataType.bf16
-    elif torch_dtype == torch.float:
+    if torch_dtype == torch.float:
         return cutlass_dtype == cutlass_library.library.DataType.f32
+    elif torch_dtype == torch.half:
+        return cutlass_dtype == cutlass_library.library.DataType.f16
+    elif torch_dtype == torch.bfloat16:
+        return cutlass_dtype == cutlass_library.library.DataType.bf16
+    elif torch_dtype == torch.int8:
+        return cutlass_dtype == cutlass_library.library.DataType.s8
+    elif torch_dtype == torch.uint8:
+        return cutlass_dtype == cutlass_library.library.DataType.u8
+    elif torch_dtype == torch.int32:
+        return cutlass_dtype == cutlass_library.library.DataType.s32
     else:
         return False
 

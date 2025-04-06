@@ -42,6 +42,8 @@ PT_EXPORT {{kernel_call_signature}} {
   using coord_t = cutlass::gemm::GemmCoord::Index;
   static cutlass::KernelHardwareInfo hw_info;
 
+  // TODO (SYCL) : device_id here is only used for hw info and doesn't necessarly mean
+  // it's linked to the SYCL queue. It's hardcoded to 0 in the CUDA version as well.
   const int device_id = 0;
 
   if (hw_info.sm_count == 0) {
@@ -73,10 +75,14 @@ PT_EXPORT {{kernel_call_signature}} {
 #endif
 #endif
   {
+    // TODO (SYCL): Pass the SYCL queue (currently last arg of `kernel_call_signature` above)
+    // once supported on CUTLASS side. Variable name to respect the naming in: _EXTRA_CPP_ARGS (sycl_kernel.py)
     auto status = gemm_op.initialize(arguments, workspace);
     CUTLASS_CHECK(status);
   }
   {
+    // TODO (SYCL): Pass the SYCL queue once supported on CUTLASS side.
+    // Variable name to respect the naming in: _EXTRA_CPP_ARGS (sycl_kernel.py)
     auto status = gemm_op.run();
     CUTLASS_CHECK(status);
     syclcompat::wait();
@@ -124,6 +130,7 @@ GEMM_ARGS_CUTLASS_3X = r"""
     {{epilogue_arguments}},
     hw_info
   };
+  // TODO (SYCL) : setup max_swizzle_size in arguments.scheduler once supported 
 """
 
 # Jinja template for Cutlass 3.x GEMM Kernel arguments if epilogue fusion is applied,
@@ -799,10 +806,10 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
 
         assert cutlass_utils.try_import_cutlass()
 
-        has_bias = len(self.input_nodes) >= 3 and self.input_nodes[2] is not None
-
         # TODO (SYCL) : Extend this once more output dtypes are supported,
         # AND No source (C) is supported
+
+        # has_bias = len(self.input_nodes) >= 3 and self.input_nodes[2] is not None
 
         # if op.C.element == DataType.void:
         #     if has_bias:
