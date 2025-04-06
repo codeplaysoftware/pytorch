@@ -87,9 +87,9 @@ class SYCLCPPScheduling(BaseScheduling):
         Codegen a SYCL template, possibly with fused epilogues
         """
         counters["inductor"]["sycl_epilogue_fusion_counter"] += len(epilogue_nodes)
-        assert self.is_sycl_cpp_template(
-            template_node
-        ), "Template node passed to SYCLScheduler.codegen_template must be a SchedulerNode that wraps a SYCLTemplateBuffer"
+        assert self.is_sycl_cpp_template(template_node), (
+            "Template node passed to SYCLScheduler.codegen_template must be a SchedulerNode that wraps a SYCLTemplateBuffer"
+        )
         template_node = cast(SchedulerNode, template_node)
         _, (_numel, rnumel) = template_node.group
         assert rnumel == 1

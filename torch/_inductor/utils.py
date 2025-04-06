@@ -1269,6 +1269,7 @@ def is_big_gpu(index_or_device: Union[int, torch.device] = 0) -> bool:
         return False
     return True
 
+
 @functools.lru_cache(None)
 def _is_xpu(index_or_device: Union[int, torch.device] = 0) -> bool:
     if isinstance(index_or_device, torch.device):
@@ -1277,6 +1278,7 @@ def _is_xpu(index_or_device: Union[int, torch.device] = 0) -> bool:
         device = torch.device(get_gpu_type(), index_or_device)
 
     return device.type == "xpu"
+
 
 @functools.lru_cache
 def get_max_num_sms() -> int:
@@ -1419,23 +1421,25 @@ def use_cutlass_template(layout: Layout, m: int, n: int, k: int) -> bool:
             return False
     return res
 
+
 def use_cutlass_sycl_template(layout: Layout, m: int, n: int, k: int) -> bool:
     from .virtualized import V
 
     gemm_size = V.graph.sizevars.size_hint(m * n * k, fallback=-1)
     if gemm_size <= 0 or gemm_size < config.sycl.cutlass_backend_min_gemm_size:
         return False
-    from .codegen.xpu.cutlass_utils import try_import_cutlass
 
     if not _is_xpu(layout.device):
         return False
 
-    layout_dtypes = [torch.bfloat16] # TODO (SYCL) : Extend to the rest of dtypes
+    layout_dtypes = [torch.bfloat16]  # TODO (SYCL) : Extend to the rest of dtypes
     res = (
         _use_template_for_gpu(layout, layout_dtypes)
         and use_max_autotune()
         and _use_autotune_backend("CUTLASS")
     )
+
+    from .codegen.xpu.cutlass_utils import try_import_cutlass
 
     if res:
         if not try_import_cutlass():
@@ -1446,6 +1450,7 @@ def use_cutlass_sycl_template(layout: Layout, m: int, n: int, k: int) -> bool:
             )
             return False
     return res
+
 
 @functools.lru_cache(None)
 def _rocm_native_device_arch_name(device: str) -> str:

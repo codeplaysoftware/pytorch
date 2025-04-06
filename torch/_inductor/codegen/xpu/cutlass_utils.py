@@ -39,9 +39,9 @@ def try_import_cutlass() -> bool:
     if os.path.isdir(cutlass_py_full_path):
         if tmp_cutlass_py_full_path not in sys.path:
             if os.path.exists(dst_link):
-                assert os.path.islink(
-                    dst_link
-                ), f"{dst_link} is not a symlink. Try to remove {dst_link} manually and try again."
+                assert os.path.islink(dst_link), (
+                    f"{dst_link} is not a symlink. Try to remove {dst_link} manually and try again."
+                )
                 assert os.path.realpath(os.readlink(dst_link)) == os.path.realpath(
                     cutlass_py_full_path
                 ), f"Symlink at {dst_link} does not point to {cutlass_py_full_path}"
@@ -83,8 +83,8 @@ class CUTLASSArgs:
     """
 
     architectures: Optional[str] = None
-    cuda_version: Optional[str] = None          # Unused in generator.py for PVC
-    instantiation_level: Optional[str] = None   # Unused YET in generator.py for PVC
+    cuda_version: Optional[str] = None  # Unused in generator.py for PVC
+    instantiation_level: Optional[str] = None  # Unused YET in generator.py for PVC
 
     operations = "all"
     build_dir = ""
@@ -124,15 +124,14 @@ def _gen_ops_cached(arch) -> list[Any]:
         return []
     arch = _normalize_sycl_arch(arch)
 
-    sycl_version = "2025.0.1"           # Placeholder, Unused in GeneratePVC
+    sycl_version = "2025.0.1"  # Placeholder, Unused in GeneratePVC
 
     args = CUTLASSArgs(
         architectures=arch,
-        instantiation_level = "0",      # TODO (SYCL) : Make it config param once enabled in cutlass_library/generator.py
-        cuda_version = sycl_version,
+        instantiation_level="0",  # TODO (SYCL) : Make it config param once enabled in cutlass_library/generator.py
+        cuda_version=sycl_version,
     )
     manifest = cutlass_manifest.Manifest(args)
-
 
     if arch == "11":
         cutlass_generator.GeneratePVC(manifest, sycl_version)

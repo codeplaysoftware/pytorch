@@ -10,8 +10,8 @@ from ..scheduler import (
     Scheduler,
     SchedulerNode,
 )
-from .xpu.sycl_cpp_scheduling import SYCLCPPScheduling
 from .triton import TritonScheduling
+from .xpu.sycl_cpp_scheduling import SYCLCPPScheduling
 
 
 if TYPE_CHECKING:

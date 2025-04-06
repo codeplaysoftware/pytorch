@@ -6,6 +6,8 @@ import re
 from abc import ABC, abstractmethod
 from typing import Optional, Union
 
+import torch
+
 from ... import ir
 from ...config import sycl as inductor_sycl_config
 from ...ir import (
@@ -21,7 +23,7 @@ from ..common import IndentedBuffer
 from . import cutlass_utils
 from .sycl_kernel import SYCLTemplateKernel
 from .sycl_template import CUTLASSTemplate
-import torch
+
 
 log = logging.getLogger(__name__)
 
@@ -565,9 +567,9 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
         import cutlass_library.gemm_operation as cutlass_gemm_op
         import cutlass_library.library as cutlass_lib  # noqa: F401
 
-        assert isinstance(
-            op, cutlass_gemm_op.GemmOperation
-        ), "op argument is required and has to be an instance of GemmOperation"
+        assert isinstance(op, cutlass_gemm_op.GemmOperation), (
+            "op argument is required and has to be an instance of GemmOperation"
+        )
 
         assert len(self.input_nodes) >= 2 and self.output_node is not None
         X, W = self.input_nodes[0], self.input_nodes[1]
@@ -593,7 +595,10 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
         else:
             input_reorder = None
         kernel_call_signature = kernel.def_kernel(
-            inputs=inputs, outputs=[Y], names_str=names_str, input_reorder=input_reorder  # type: ignore[arg-type]
+            inputs=inputs,  # type: ignore[arg-type]
+            outputs=[Y],
+            names_str=names_str,
+            input_reorder=input_reorder,  # type: ignore[arg-type]
         )
 
         # Make op mutable without affecting others
@@ -793,7 +798,6 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
             return False
 
         assert cutlass_utils.try_import_cutlass()
-        from cutlass_library.library import DataType  # type: ignore[import]
 
         has_bias = len(self.input_nodes) >= 3 and self.input_nodes[2] is not None
 

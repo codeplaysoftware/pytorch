@@ -24,10 +24,10 @@ from torch._inductor import ir
 from torch._inductor.codecache import (
     CppCodeCache,
     CUDACodeCache,
-    SYCLCodeCache,
     DLLWrapper,
     get_hash,
     PyCodeCache,
+    SYCLCodeCache,
 )
 from torch._inductor.utils import get_gpu_type, is_gpu
 from torch._logging import getArtifactLogger
@@ -935,6 +935,7 @@ class CppBenchmarkRequest(CPUDeviceBenchmarkMixin, BenchmarkRequest):
     def __str__(self) -> str:
         return f"{self.kernel_name=}"
 
+
 class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
     # Important: Instances of this class have to be serializable
     # across process boundaries. Do not put Tensors in here!
@@ -956,13 +957,13 @@ class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
         self.hash_key: str = ""
         self.source_file: str = ""
         self.hash_key, self.source_file = SYCLCodeCache.write(self.source_code, "so")
-        
+
     def precompile(self):
         # Prepopulate SYCLCodeCache
         autotuning_log.debug("Precompiling %s", self)
         SYCLCodeCache.compile(self.source_code, "so")
         autotuning_log.debug("Done precompiling %s", self)
-        
+
     def make_run_fn(
         self, *input_tensors: torch.Tensor, output_tensor: torch.Tensor
     ) -> Callable[[], None]:
@@ -1023,6 +1024,7 @@ class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
 
     def __str__(self) -> str:
         return f"{self.kernel_name=}, {self.source_file=}, {self.hash_key=}"
+
 
 def benchmark_in_sub_process(
     choices: list[TritonTemplateCaller],

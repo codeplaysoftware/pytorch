@@ -1,7 +1,7 @@
 # mypy: allow-untyped-defs
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, TYPE_CHECKING, Union
 
 from sympy import Expr, symbols
 
@@ -30,7 +30,7 @@ from ..common import (
     WorkspaceArg,
     WorkspaceZeroMode,
 )
-from ..cpp_utils import DTYPE_TO_CPP, CppPrinter
+from ..cpp_utils import CppPrinter, DTYPE_TO_CPP
 
 
 if TYPE_CHECKING:
@@ -451,7 +451,9 @@ class SYCLTemplateCaller(ChoiceCaller):
         make_kernel_render: Callable[[SYCLTemplateBuffer, Optional[list[IRNode]]], str],
         bmreq: SYCLBenchmarkRequest,
         template: "SYCLTemplate",  # type: ignore[name-defined]
-        info_kwargs: Optional[dict[str, Union[PrimitiveInfoType, list[PrimitiveInfoType]]]],  # type: ignore[type-arg]
+        info_kwargs: Optional[
+            dict[str, Union[PrimitiveInfoType, list[PrimitiveInfoType]]]
+        ],  # type: ignore[type-arg]
         description: str,
     ) -> None:
         super().__init__(name, input_nodes, layout, description)

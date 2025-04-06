@@ -390,11 +390,11 @@ def init_backend_registration() -> None:
     from .cpp_wrapper_cpu_array_ref import CppWrapperCpuArrayRef
     from .cpp_wrapper_gpu import CppWrapperGpu
     from .cuda_combined_scheduling import CUDACombinedScheduling
-    from .xpu_combined_scheduling import SYCLCombinedScheduling
     from .halide import HalideScheduling
     from .mps import MetalScheduling
     from .triton import TritonScheduling
     from .wrapper import PythonWrapperCodegen
+    from .xpu_combined_scheduling import SYCLCombinedScheduling
 
     if get_scheduling_for_device("cpu") is None:
         cpu_backends = {

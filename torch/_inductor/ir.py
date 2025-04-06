@@ -102,7 +102,6 @@ if TYPE_CHECKING:
 
     from .codegen.cuda.cuda_template import CUDATemplate
     from .codegen.xpu.sycl_template import SYCLTemplate
-    
     from .graph import GraphLowering
     from .utils import IndentedBuffer
 
@@ -4673,6 +4672,7 @@ class CUDATemplateBuffer(TemplateBuffer):
     def get_workspace_size(self):  # type: ignore[no-untyped-def]
         return self.workspace_size if self.workspace_size is not None else 0
 
+
 class SYCLTemplateBuffer(TemplateBuffer):
     def __init__(  # type: ignore[no-untyped-def]
         self,
@@ -4689,6 +4689,7 @@ class SYCLTemplateBuffer(TemplateBuffer):
 
     def get_workspace_size(self):  # type: ignore[no-untyped-def]
         return self.workspace_size if self.workspace_size is not None else 0
+
 
 class CppTemplateBuffer(TemplateBuffer):
     def __init__(self, layout, inputs, make_kernel_render, template, choice) -> None:  # type: ignore[no-untyped-def]
