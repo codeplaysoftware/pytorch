@@ -75,7 +75,7 @@ class SYCLTemplate(KernelTemplate):
             patch.object(V.graph, "get_dtype", self._fake_get_dtype(self.output_node)),
             SYCLTemplateKernel(
                 kernel_name=kernel_name,
-                runtime_arg_info=self.get_runtime_arg_info(),
+                runtime_arg_info=self.get_runtime_arg_info(),  # SYCL (TODO) : Currently empty
                 runtime_arg_values=self.get_runtime_arg_values(**kwargs),
             ) as kernel,
         ):
@@ -266,11 +266,12 @@ class CUTLASSTemplate(SYCLTemplate):
 
     @override
     def get_runtime_arg_info(self) -> list[ArgInfo]:
-        return [ArgInfo("swizzle", "const uint8_t")]
+        return []  # TODO (SYCL) : Add relevant RT params once supported (like swizzling)
 
     @override
     def get_runtime_arg_values(self, **kwargs) -> list[Any]:
         """
         Helper method to retrieve runtime args from generate kwargs
+        # TODO (SYCL) : Currently returning empty list until a RT arg/param is added
         """
         return [kwargs[arg.name] for arg in self.get_runtime_arg_info()]

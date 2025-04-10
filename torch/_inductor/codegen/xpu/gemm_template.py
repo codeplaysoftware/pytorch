@@ -6,7 +6,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Optional, Union
 
-import torch
+from torch import float32
 
 from ... import ir
 from ...config import sycl as inductor_sycl_config
@@ -130,7 +130,6 @@ GEMM_ARGS_CUTLASS_3X = r"""
     {{epilogue_arguments}},
     hw_info
   };
-  // TODO (SYCL) : setup max_swizzle_size in arguments.scheduler once supported 
 """
 
 # Jinja template for Cutlass 3.x GEMM Kernel arguments if epilogue fusion is applied,
@@ -281,11 +280,8 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
 
         ops = self.gen_ops()
         for name, op in ops:
-            for swizzle in inductor_sycl_config.cutlass_max_profiling_swizzle_options:
-                description = f"{name} swizzle={swizzle}"
-                self.maybe_append_choice(
-                    choices, description=description, op=op, swizzle=swizzle
-                )
+            description = f"{name}"  # TODO (SYCL): Include RT arg (like swizzling) once supported, in the description and function arguments
+            self.maybe_append_choice(choices, description=description, op=op)
 
         if len(ops) == 0:
             input_layouts = [node.get_layout() for node in input_nodes]
@@ -320,10 +316,6 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
                 #include "cutlass/epilogue/thread/activation.h"
                 #include "cutlass/gemm/dispatch_policy.hpp"
                 #include "cutlass/gemm/kernel/tile_scheduler.hpp"
-                #include "cutlass/tensor_ref.h"
-                #include "cutlass/util/distribution.h"
-                #include "cutlass/util/packed_stride.hpp"
-                #include "cutlass/util/tensor_view_io.h"
             """
         )
         return res
@@ -658,7 +650,7 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
         # TODO (SYCL) : This is a workaround hardcoding output type (layout) to float32
         # Should be removed once not limited to the bfloat input->float32 accum cutlass configurations
         float_layout = copy.deepcopy(layout)
-        float_layout.dtype = torch.float32
+        float_layout.dtype = float32
         super().__init__(input_nodes, float_layout, alpha, beta, input_reorder)
 
     @staticmethod
