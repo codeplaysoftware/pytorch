@@ -85,7 +85,7 @@ PT_EXPORT {{kernel_call_signature}} {
     // Variable name to respect the naming in: _EXTRA_CPP_ARGS (sycl_kernel.py)
     auto status = gemm_op.run();
     CUTLASS_CHECK(status);
-    syclcompat::wait();
+    syclcompat::wait_and_throw();
   }
   }
   catch (std::exception& e) {
@@ -447,10 +447,21 @@ class CUTLASSGemmTemplate(CUTLASSTemplate, ABC):
         X = self.input_nodes[0]
         W = self.input_nodes[1]
 
+        # Filter ops according to the shape match.
+        if not self._shape_match(op):
+            return None
+
         if not (
             self.layout_match(X.get_layout(), op.A.layout)
             and self.layout_match(W.get_layout(), op.B.layout)
         ):
+            return None
+
+        # Filter ops by alignment.
+        if not self._alignment_match(op):
+            log.debug(
+                "Skipping due to alignment mismatch. op: %s", op.configuration_name()
+            )
             return None
 
         # Update op

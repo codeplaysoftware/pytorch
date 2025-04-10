@@ -950,7 +950,7 @@ class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
     ) -> None:
         super().__init__(kernel_name, input_tensor_meta, output_tensor_meta, extra_args)
         self.source_code = source_code
-        self.workspace_size: int = 0
+        self.workspace_size: int = 0  # TODO (SYCL): workspace size remains 0
         self.workspace: Optional[torch.Tensor] = None
         self.DLL: Optional[DLLWrapper] = None
         self._workspace_size_updated = False
@@ -968,7 +968,7 @@ class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
         self, *input_tensors: torch.Tensor, output_tensor: torch.Tensor
     ) -> Callable[[], None]:
         self.ensure_dll_loaded()
-        self.update_workspace_size()
+        self.update_workspace_size()  # TODO (SYCL): No effect on workspace_size being unused (remains = 0)
         args = [
             c_void_p(tensor.data_ptr())
             for tensor in list(input_tensors) + [output_tensor]
@@ -1006,10 +1006,9 @@ class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
     def update_workspace_size(self) -> None:
         if self._workspace_size_updated:
             return
-        # Harcoded temporarily for testing with known kernels
-        self.workspace_size = 4096  # Fixed size for PoC
+        # TODO (SYCL): Harcoded to zero since no SLM is used on PVC at the moment
+        self.workspace_size = 0
         self._workspace_size_updated = True
-        # TODO (SYCL) : Implement comprehensive workspace updating mechanism
 
     def ensure_dll_loaded(self):
         if self.DLL is None:
