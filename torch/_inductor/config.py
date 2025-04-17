@@ -1459,6 +1459,17 @@ class sycl:
 
     # Whether to use fast math.
     use_fast_math = False
+    
+    # Minimum value of M*N*K to consider the CUTLASS backend for GEMM ops.
+    cutlass_backend_min_gemm_size: int = 1
+    
+    # Configures the maximum number of CUTLASS configs to profile in max_autotune.
+    # By default it's None, so that all CUTLASS configs are tuned.
+    cutlass_max_profiling_configs: Optional[int] = None
+
+    # TODO (SYCL) : Enable the standalone GEMM runner for testing later
+    generate_test_runner: bool = False
+
 
 
 # Backend to use for CPU codegen either "cpp" or "triton" (experimental) or "halide" (experimental)

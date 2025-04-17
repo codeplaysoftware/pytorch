@@ -1366,6 +1366,16 @@ def is_big_gpu(index_or_device: Union[int, torch.device] = 0) -> bool:
     return True
 
 
+@functools.lru_cache(None)
+def _is_xpu(index_or_device: Union[int, torch.device] = 0) -> bool:
+    if isinstance(index_or_device, torch.device):
+        device = index_or_device
+    else:
+        device = torch.device(get_gpu_type(), index_or_device)
+
+    return device.type == "xpu"
+
+
 @functools.lru_cache
 def get_max_num_sms() -> int:
     return torch.cuda.get_device_properties("cuda").multi_processor_count
@@ -1498,8 +1508,8 @@ def use_cutlass_template(layout: Layout, m: int, n: int, k: int) -> bool:
         return False
     from .codegen.cuda.cutlass_utils import try_import_cutlass
 
-    # Do not use cutlass template on ROCm
-    if torch.version.hip:
+    # Do not use CUDA cutlass template on ROCm or SYCL
+    if torch.version.hip or _is_xpu(layout.device):
         return False
 
     # output dtype
@@ -1510,6 +1520,36 @@ def use_cutlass_template(layout: Layout, m: int, n: int, k: int) -> bool:
         and use_max_autotune()
         and _use_autotune_backend("CUTLASS")
     )
+
+    if res:
+        if not try_import_cutlass():
+            log.warning(
+                "Failed to import CUTLASS lib. Please check whether "
+                "_inductor.config.cutlass_dir is set correctly. "
+                "Skipping CUTLASS backend for now."
+            )
+            return False
+    return res
+
+
+def use_cutlass_sycl_template(layout: Layout, m: int, n: int, k: int) -> bool:
+    from .virtualized import V
+
+    gemm_size = V.graph.sizevars.size_hint(m * n * k, fallback=-1)
+    if gemm_size <= 0 or gemm_size < config.sycl.cutlass_backend_min_gemm_size:
+        return False
+
+    if not _is_xpu(layout.device):
+        return False
+
+    layout_dtypes = [torch.bfloat16]  # TODO (SYCL) : Extend to the rest of dtypes
+    res = (
+        _use_template_for_gpu(layout, layout_dtypes)
+        and use_max_autotune()
+        and _use_autotune_backend("CUTLASS")
+    )
+
+    from .codegen.xpu.cutlass_utils import try_import_cutlass
 
     if res:
         if not try_import_cutlass():
