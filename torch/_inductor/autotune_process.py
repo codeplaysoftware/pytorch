@@ -889,8 +889,7 @@ def get_tuning_process_pool() -> TuningProcessPool:
 
 class SYCLBenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
     # Important: Instances of this class have to be serializable
-    # across process boundaries. Do not put Tensors in here!
-    # TODO (SYCL) : Complete the bmrq class to enable full autotuning
+    # across process boundaries. Do not put device tensors in here!
     def __init__(
         self,
         kernel_name: str,

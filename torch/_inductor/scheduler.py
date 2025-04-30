@@ -2715,7 +2715,10 @@ class Scheduler:
                 out_buffer = out_storage.data
                 assert isinstance(out_buffer, ir.OperationBuffer)
 
-                out_buffer.layout = multi_node.layout
+                # TODO (SYCL): This is a temporary hack to allow auto-tuning
+                # while our CUTLASS does not support bf16 accumulation for
+                # GEMM. Uncomment this line when it is supported.
+                #out_buffer.layout = multi_node.layout
                 replace_operation_buffer(multi_node, out_buffer)
                 new_scheduler_node = self.create_scheduler_node(out_buffer)
 
