@@ -42,9 +42,7 @@ PT_EXPORT {{kernel_call_signature}} {
   using coord_t = cutlass::gemm::GemmCoord::Index;
   static cutlass::KernelHardwareInfo hw_info;
 
-  // TODO (SYCL) : device_id here is only used for hw info and doesn't necessarly mean
-  // it's linked to the SYCL queue. It's hardcoded to 0 in the CUDA version as well.
-  const int device_id = 0;
+  const int device_id = syclcompat::get_device_id(stream->get_device());
 
   if (hw_info.sm_count == 0) {
     hw_info.sm_count = cutlass::KernelHardwareInfo::query_device_multiprocessor_count(device_id);
@@ -75,15 +73,11 @@ PT_EXPORT {{kernel_call_signature}} {
 #endif
 #endif
   {
-    // TODO (SYCL): Pass the SYCL queue (currently last arg of `kernel_call_signature` above)
-    // once supported on CUTLASS side. Variable name to respect the naming in: _EXTRA_CPP_ARGS (sycl_kernel.py)
-    auto status = gemm_op.initialize(arguments, workspace);
+    auto status = gemm_op.initialize(arguments, workspace, stream);
     CUTLASS_CHECK(status);
   }
   {
-    // TODO (SYCL): Pass the SYCL queue once supported on CUTLASS side.
-    // Variable name to respect the naming in: _EXTRA_CPP_ARGS (sycl_kernel.py)
-    auto status = gemm_op.run();
+    auto status = gemm_op.run(stream);
     CUTLASS_CHECK(status);
     syclcompat::wait_and_throw();
   }

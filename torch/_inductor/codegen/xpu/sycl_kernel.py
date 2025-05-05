@@ -154,8 +154,7 @@ class SYCLTemplateKernel(SYCLKernel):
     Template kernels defined by SYCL / Cutlass in C++.
     """
 
-    # TODO (SYCL): The SYCL queue is not being used
-    _EXTRA_CPP_ARGS = "size_t* workspace_size, uint8_t* workspace, sycl::queue stream"
+    _EXTRA_CPP_ARGS = "size_t* workspace_size, uint8_t* workspace, sycl::queue* stream"
 
     def __init__(
         self,
