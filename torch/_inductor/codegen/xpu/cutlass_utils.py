@@ -203,7 +203,7 @@ def get_accumulator_dtype(
         return None
 
     if all(dtype == torch.bfloat16 for dtype in input_torch_dtypes):
-        return torch.float
+        return torch.bfloat16
     else:
         raise NotImplementedError(f"Unsupported data types: {input_torch_dtypes}")
 

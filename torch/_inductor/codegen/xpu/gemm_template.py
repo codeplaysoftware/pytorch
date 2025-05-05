@@ -652,11 +652,7 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
         beta: float,
         input_reorder: Optional[list[int]] = None,
     ):
-        # TODO (SYCL) : This is a workaround hardcoding output type (layout) to float32
-        # Should be removed once not limited to the bfloat input->float32 accum cutlass configurations
-        float_layout = copy.deepcopy(layout)
-        float_layout.dtype = float32
-        super().__init__(input_nodes, float_layout, alpha, beta, input_reorder)
+        super().__init__(input_nodes, layout, alpha, beta, input_reorder)
 
     @staticmethod
     def add_cutlass_gemm_choices(
