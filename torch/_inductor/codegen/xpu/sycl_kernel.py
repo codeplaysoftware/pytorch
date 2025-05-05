@@ -467,8 +467,8 @@ class SYCLTemplateCaller(ChoiceCaller):
         self.bmreq.precompile()
 
     def benchmark(self, *args, out) -> float:
-        # TODO (SYCL) : Enable benchmarking once supported
-        return 0.001
+        assert self.bmreq is not None
+        return self.bmreq.benchmark(*args, output_tensor=out)
 
     def __str__(self) -> str:
         return f"SYCLTemplateCaller(source_file={self.bmreq.source_file})"
