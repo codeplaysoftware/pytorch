@@ -652,11 +652,7 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
         beta: float,
         input_reorder: Optional[list[int]] = None,
     ):
-        # TODO (SYCL) : This is a workaround hardcoding output type (layout) to float32
-        # Should be removed once not limited to the bfloat input->float32 accum cutlass configurations
-        float_layout = copy.deepcopy(layout)
-        float_layout.dtype = float32
-        super().__init__(input_nodes, float_layout, alpha, beta, input_reorder)
+        super().__init__(input_nodes, layout, alpha, beta, input_reorder)
 
     @staticmethod
     def add_cutlass_gemm_choices(
@@ -780,14 +776,30 @@ class CUTLASS3xGemmTemplate(CUTLASSGemmTemplate):
         self,
         op: "cutlass_library.gemm_op.GemmOperation",  # type: ignore[name-defined]  # noqa: F821
     ) -> bool:
+        import cutlass_library.library as cutlass_lib
+
         has_bias = len(self.input_nodes) >= 3 and self.input_nodes[2] is not None
         if has_bias:
             bias = self.input_nodes[2]
+            # Bias data type
+            op.C.element = cutlass_utils.torch_dtype_to_cutlass_type(
+                bias.get_layout().dtype
+            )
+            assert op.C.element == op.D.element, (
+                f"Expect C and D to have the same dtype, found {op.C.element} and {op.D.element}"
+            )
+
+            # Bias layout
             bias_layout = CUTLASSGemmTemplate.cutlass_layout(bias.get_layout())
             op.C.layout = bias_layout
+
+            # Bias alignment
             status = self.set_alignment(bias.get_layout(), op.C)
             if not status:
                 return False
+
+        else:
+            op.C.element = cutlass_lib.DataType.void
         return True
 
     def _dtype_match(
